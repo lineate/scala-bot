@@ -13,7 +13,7 @@ object SBot extends Bot {
 
   override def getName: String = "Hello, I'm scala bot!"
 
-  override def move(gs: GameStateView): Move = {
+  override def move(gs: GameState): Move = {
     m = gs.field.length
     n = gs.field.head.length
     id = gs.botId
@@ -21,7 +21,7 @@ object SBot extends Bot {
     Move.STOP
   }
 
-  def findMe(gs: GameStateView): Seq[Point] = {
+  def findMe(gs: GameState): Seq[Point] = {
     val tail = Cell.tail(id)
     val me = mutable.Buffer(gs.head)
     // current point
