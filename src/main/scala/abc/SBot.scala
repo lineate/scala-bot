@@ -10,9 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 
 // Suggested by Linker N
 class SBot(
-  name: String = "",
-  random: Random = new Random()
+  name: String,
+  random: Random
 ) extends Bot {
+
+  // required by API
+  def this() = this("", new Random())
 
   val neigh = Seq(Pair(0, -1), Pair(-1, 0), Pair(0, 1), Pair(1, 0))
   var m = 0
