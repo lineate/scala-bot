@@ -1,8 +1,8 @@
 package abc
 
-import org.junit.runner.RunWith
-import org.scalatest.{FunSuite, Matchers}
 import org.scalatest.junit.JUnitRunner
+import org.scalatest.{FunSuite, Matchers}
+import org.junit.runner.RunWith
 
 @RunWith(classOf[JUnitRunner])
 class SBotTest extends FunSuite with Matchers {

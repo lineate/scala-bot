@@ -9,10 +9,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 // Suggested by Linker N
-class SBot(
-  name: String,
-  random: Random
-) extends Bot {
+class SBot(name: String, random: Random) extends Bot {
 
   // required by API
   def this() = this("", new Random())
@@ -55,14 +52,16 @@ class SBot(
       direction(curHead, newHead)
     } else {
       // generate the new path
-      val dst = findEmpty(gs.cells, 20).headOption
-      if (dst.isDefined) {
-        val testDir = direction(curHead, dst.get)
-        path = buildPath(curHead, dst.get, testDir == LEFT || testDir == RIGHT)
-        findClosest(dst.get, borderOrOwned).foreach(border ⇒ {
-          val fin = buildPath(dst.get, border, random.nextBoolean())
-          path = path ++ fin
-        })
+      val dstOpt = findEmpty(gs.cells, 20).headOption
+      if (dstOpt.isDefined) {
+        val dst = dstOpt.get
+        val testDir = direction(curHead, dst)
+        path = buildPath(curHead, dst, testDir == LEFT || testDir == RIGHT)
+        val borderOpt = findClosest(dst, borderOrOwnedPartial(curHead, dst))
+        if (borderOpt.isDefined) {
+          val border = borderOpt.get
+          path = path ++ buildPath(dst, border, random.nextBoolean())
+        }
         val newHead = path.head
         path = path.tail
         direction(curHead, newHead)
@@ -112,9 +111,32 @@ class SBot(
   def distance(src: Point, dst: Point): Int =
     Math.abs(dst.getRow - src.getRow) + Math.abs(dst.getCol - src.getCol)
 
-  def borderOrOwned(p: Point): Boolean = {
-    val ct = gs.cells(p.getRow)(p.getCol).getCellType
-    ct == CellType.BORDER || ct == CellType.OWNED
+  def borderOrOwnedPartial(o: Point, a: Point)(p: Point): Boolean = {
+    val oi = o.getRow
+    val oj = o.getCol
+    val ai = a.getRow
+    val aj = a.getCol
+    def select(x: Point): Boolean = {
+      val xi = x.getRow
+      val xj = x.getCol
+      // 4 3 2
+      // 5 9 1
+      // 6 7 8
+      if (false) false
+      else if (oi == ai && oj < aj ) aj <= xj
+      else if (ai < oi  && oj < aj ) xi <= ai && aj <= xj
+      else if (ai < oi  && oj == aj) xi <= ai
+      else if (ai < oi  && aj < oj ) xi <= ai && xj <= aj
+      else if (oi == ai && aj < oj ) xj <= aj
+      else if (ai > oi  && aj < oj ) ai <= xi && xj <= aj
+      else if (ai > oi  && oj == aj) ai <= xi
+      else if (ai > oi  && oj < aj ) ai <= xi && aj <= xj
+      else if (oi == ai && oj < aj ) aj <= xj
+      else ai != xi && aj != xj
+    }
+    val cell = gs.cells(p.getRow)(p.getCol)
+    val selected = select(p)
+    (cell.isBorder || cell.isOwned) && selected
   }
 
   def buildPath(src: Point, dst: Point, horzFirst: Boolean): Seq[Point] = {
@@ -135,10 +157,10 @@ class SBot(
     for (r ← 1 to (m + n)) {
       for (k ← 0 until r) {
         val ps = Array(
-          Point.of(oi - k, oj + r - k),
-          Point.of(oi - r + k, oj - k),
-          Point.of(oi + k, oj - r + k),
-          Point.of(oi + r - k, oj + k)
+          Point.of(oi - k, oj + r - k).bounded,
+          Point.of(oi - r + k, oj - k).bounded,
+          Point.of(oi + k, oj - r + k).bounded,
+          Point.of(oi + r - k, oj + k).bounded
         )
         val opt = ps.find(predicate)
         if (opt.isDefined)
@@ -163,6 +185,14 @@ class SBot(
     buf.sortBy(p ⇒ distance(curHead, p))
   }
 
+  implicit class RichPoint(it: Point) {
+    def bounded: Point = {
+      val i = it.getRow
+      val j = it.getCol
+      if (0 <= i && i < m && 0 <= j && j < n) it
+      else Point.of(i.bound(0, m - 1), j.bound(0, n - 1))
+    }
+  }
 
   implicit class RichInt(it: Int) {
     def bound(l: Int, u: Int): Int = {
@@ -188,7 +218,8 @@ class SBot(
 object SBot extends App {
   val random = new Random(123)
   val gameplay = new Gameplay
-  val bots = mutable.Buffer[Bot](new SBot("1", random), new SBot("2", random))
+  val bots = mutable.Buffer[Bot](new SBot("1", random))
+  //val bots = mutable.Buffer[Bot](new SBot("1", random), new SBot("2", random))
   val botNames = bots.map(_.getName).asJava
   val mgs = gameplay.createMatch(10, 20, bots.asJava, 100L, 0.9, 0).getGameState
   for (_ ← 0 until 100) {
@@ -198,6 +229,7 @@ object SBot extends App {
       gameplay.step(mgs, k, move)
       println("move = " + move + " current game state = \n" +
         gameplay.describeGameState(mgs, botNames, false, false))
+      Thread.sleep(100)
     }
   }
 }
